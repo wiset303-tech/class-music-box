@@ -84,6 +84,17 @@
   #toast { max-width:92vw; white-space:normal; text-wrap:balance; }
   #textPanel label, #editor p, #editor label { white-space:normal; }
   @media (max-width:420px) { #tabs { gap:2px; padding:3px; } #tabs button .em { display:none; } #photoTools { gap:4px; padding:6px; } }
+  /* 우측 확대/축소 막대: 손가락·전자펜으로 잡기 쉬운 큰 크기 */
+  #zoomRail { position:fixed; right:calc(10px + env(safe-area-inset-right,0px)); top:50%; transform:translateY(-58%); z-index:4; display:flex; flex-direction:column; align-items:center; gap:10px; padding:10px 8px; background:#2a1b3acc; backdrop-filter:blur(8px); border:1px solid #ffffff22; border-radius:30px; touch-action:none; user-select:none; }
+  #zoomRail button { width:52px; height:52px; padding:0; border-radius:50%; font-size:26px; line-height:1; display:flex; align-items:center; justify-content:center; }
+  #zrTrack { position:relative; width:52px; height:clamp(120px,30vh,280px); margin:26px 0; cursor:pointer; touch-action:none; outline:none; }
+  #zrTrack::before { content:""; position:absolute; left:50%; top:0; bottom:0; width:10px; margin-left:-5px; border-radius:5px; background:#ffffff30; }
+  #zrTrack:focus-visible::before { box-shadow:0 0 0 3px var(--gold); }
+  #zrThumb { position:absolute; left:50%; width:52px; height:52px; margin-left:-26px; border-radius:50%; background:var(--gold); box-shadow:0 2px 10px #0008; display:flex; align-items:center; justify-content:center; font-weight:400; }
+  #zrThumb::after { content:"🔍"; font-size:22px; }
+  body.light #zoomRail { background:#fffd; border-color:#00000018; }
+  body.light #zrTrack::before { background:#00000028; }
+  @media (max-height:520px) { #zoomRail button { width:44px; height:44px; font-size:22px; } #zrTrack { height:90px; } #zrThumb { width:44px; height:44px; margin-left:-22px; } }
   @media (max-width:640px){ #tabs{ top:96px; } #bar input[type=range]{ width:70px; } }
 </style>
 </head>
@@ -115,7 +126,12 @@
 </div>
 
 <div id="toast"></div>
-<div id="zoomBar" hidden><button id="zIn" aria-label="더 크게">＋</button><button id="zOut" aria-label="더 작게">－</button><button id="closeBtn">✕ 닫기</button></div>
+<div id="zoomBar" hidden><button id="closeBtn">✕ 닫기</button></div>
+<div id="zoomRail" role="group" aria-label="확대 축소">
+  <button id="rzIn" aria-label="확대">＋</button>
+  <div id="zrTrack" role="slider" tabindex="0" aria-label="확대 정도" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><b id="zrThumb"></b></div>
+  <button id="rzOut" aria-label="축소">－</button>
+</div>
 <div id="photoTools" role="toolbar" aria-label="사진 편집">
   <button id="tZoom">🔍 크게 보기</button><button id="tPhoto">📷 바꾸기</button><button id="tEdit">✂️ 편집</button><button id="tRemove">🗑 빼기</button>
 </div>

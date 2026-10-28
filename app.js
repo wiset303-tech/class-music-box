@@ -290,7 +290,7 @@ function updateToolsLabels() {
   $('tEdit').disabled = !has; $('tRemove').disabled = !has;
 }
 function updateHint() {
-  $('hint').textContent = isOpen ? '사진을 크게 보는 중이에요 · ＋ － 로 더 키우고, 바깥을 누르거나 닫기를 누르면 돌아가요'
+  $('hint').textContent = isOpen ? '사진을 크게 보는 중이에요 · 오른쪽 막대로 더 키우고, 바깥을 누르거나 닫기를 누르면 돌아가요'
     : isTouch ? '오르골을 누르면 돔이 열리고 사진이 커져요 · 사진을 탭하면 편집 메뉴가 나와요'
     : '오르골을 누르면 유리 돔이 열리고 사진이 커져요 · 사진에 마우스를 올리면 편집 메뉴가 나와요';
 }
@@ -311,9 +311,32 @@ function setOpen(v) {
   camLock = 1.8; $('zoomBar').hidden = !v; updateHint(); updateToolsLabels();
 }
 $('closeBtn').onclick = () => setOpen(false);
-$('zIn').onclick = () => { camLock = 0; cam.dist = clamp(cam.dist * 0.8, cam.minD, cam.maxD); };
-$('zOut').onclick = () => { camLock = 0; cam.dist = clamp(cam.dist * 1.25, cam.minD, cam.maxD); };
 addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('textPanel').hidden) $('textPanel').hidden = true; else editorOpen ? closeEditor(false) : setOpen(false); } });
+
+/* ---------- 우측 확대/축소 막대 (전자칠판처럼 터치가 많은 화면용: 큰 손잡이를 끌거나 ＋/－ 를 누른다) ---------- */
+const track = $('zrTrack'), thumb = $('zrThumb');
+const lnMin = () => Math.log(cam.minD), lnMax = () => Math.log(cam.maxD);
+const distToT = d => clamp(1 - (Math.log(d) - lnMin()) / (lnMax() - lnMin()), 0, 1);   // 위 = 가깝게(확대)
+const tToDist = t => Math.exp(lnMin() + (1 - t) * (lnMax() - lnMin()));
+let zrDrag = false, zrLast = -1;
+function zoomBy(f) { camLock = 0; cam.dist = clamp(cam.dist * f, cam.minD, cam.maxD); }
+function trackT(e) { const r = track.getBoundingClientRect(); return 1 - clamp((e.clientY - r.top) / r.height, 0, 1); }
+track.addEventListener('pointerdown', e => { track.setPointerCapture(e.pointerId); zrDrag = true; camLock = 0; cam.dist = tToDist(trackT(e)); });
+track.addEventListener('pointermove', e => { if (zrDrag) cam.dist = tToDist(trackT(e)); });
+['pointerup', 'pointercancel'].forEach(t => track.addEventListener(t, () => { zrDrag = false; }));
+track.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); zoomBy(0.9); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); zoomBy(1.1); }
+});
+$('rzIn').onclick = () => zoomBy(0.8);
+$('rzOut').onclick = () => zoomBy(1.25);
+$('zoomRail').addEventListener('wheel', e => { e.preventDefault(); zoomBy(1 + e.deltaY * 0.001); }, { passive: false });
+function syncZoomRail() {                                   // 휠·핀치·열기 연출로 거리가 바뀌어도 손잡이가 따라간다
+  const t = distToT(cam.dist);
+  if (Math.abs(t - zrLast) < 0.002) return;
+  zrLast = t; thumb.style.bottom = 'calc(' + (t * 100) + '% - 26px)';
+  track.setAttribute('aria-valuenow', String(Math.round(t * 100)));
+}
 
 /* ---------- 사진 넣기 / UI ---------- */
 // 사진은 가로세로 최대 1000px로 줄여서 저장 (용량 절약)
@@ -589,7 +612,7 @@ function frame(now) {
   matRim.emissive.copy(hlColor).multiplyScalar(0.85 * hoverDome); haloMat.opacity = 0.55 * hoverDome;
   seatMesh.scale.z = 1 + 0.9 * hoverDome; matGlass.opacity = 0.16 + 0.1 * hoverDome;
   matFrame.emissive.copy(hlColor).multiplyScalar(0.7 * hoverPhoto);
-  updateCamera(); placeTools(); renderer.render(scene, camera); requestAnimationFrame(frame);
+  updateCamera(); syncZoomRail(); placeTools(); renderer.render(scene, camera); requestAnimationFrame(frame);
 }
 
 /* ---------- 시작 ---------- */
