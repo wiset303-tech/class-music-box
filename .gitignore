@@ -1,0 +1,10 @@
+# 학생 사진·내보내기 파일은 절대 올리지 않습니다
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.webp
+*.album.json
+photos/
+node_modules/
+.DS_Store

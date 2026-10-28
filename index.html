@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>우리 반 오르골</title>
+<style>
+  :root { --gold:#e8c27a; --ink:#2b1d14; --cream:#fff6e6; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; overflow:hidden; background:#1b1220; font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif; color:var(--cream); }
+  canvas#c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+  canvas#c.dragging { cursor:grabbing; }
+  header { position:fixed; top:0; left:0; right:0; padding:14px 16px 0; text-align:center; pointer-events:none; }
+  #title { pointer-events:auto; background:transparent; border:0; border-bottom:1px dashed transparent; color:var(--gold); font-size:clamp(22px,4vw,34px); font-weight:700; text-align:center; width:min(90vw,520px); outline:none; text-shadow:0 2px 12px #0008; }
+  #title:hover,#title:focus { border-bottom-color:var(--gold); }
+  #hint { margin:4px 0 0; font-size:13px; opacity:.75; }
+  #bar { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; justify-content:center; padding:10px 14px; max-width:96vw; background:#2a1b3acc; backdrop-filter:blur(8px); border:1px solid #ffffff22; border-radius:18px; }
+  #bar label { font-size:12px; display:flex; align-items:center; gap:6px; opacity:.9; }
+  #bar input[type=range] { width:90px; accent-color:var(--gold); }
+  button { font:inherit; font-size:14px; color:var(--ink); background:var(--gold); border:0; border-radius:12px; padding:8px 14px; cursor:pointer; }
+  button:hover { filter:brightness(1.08); }
+  button.ghost { background:#ffffff1a; color:var(--cream); }
+  button.danger { background:#d26a6a; color:#fff; }
+  #play { width:46px; height:46px; border-radius:50%; font-size:20px; padding:0; }
+  .count { display:flex; align-items:center; gap:6px; font-size:13px; }
+  .count button { padding:4px 10px; }
+  #panel { position:fixed; right:14px; top:84px; width:220px; padding:14px; display:flex; flex-direction:column; gap:8px; background:#2a1b3af0; border:1px solid #ffffff2a; border-radius:16px; }
+  #panel[hidden] { display:none; }
+  #panel h3 { margin:0; font-size:15px; color:var(--gold); }
+  #panel input[type=text] { width:100%; padding:8px 10px; border-radius:10px; border:1px solid #ffffff33; background:#ffffff14; color:var(--cream); font:inherit; }
+  #toast { position:fixed; left:50%; top:90px; transform:translateX(-50%); background:#000b; padding:8px 16px; border-radius:20px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; }
+  #toast.show { opacity:1; }
+  select { font:inherit; font-size:13px; padding:5px 8px; border-radius:10px; border:0; background:#ffffff26; color:inherit; }
+  select option { color:#222; }
+  body.light { color:#4a2a3a; --gold:#d9647f; }
+  body.light #bar,body.light #panel { background:#ffffffcc; border-color:#00000018; }
+  body.light #panel input[type=text] { background:#fff; color:#4a2a3a; border-color:#0002; }
+  body.light button.ghost { background:#0000000f; color:#4a2a3a; }
+  body.light button { color:#fff; }
+  body.light #title { text-shadow:none; }
+  #tabs { position:fixed; top:84px; left:50%; transform:translateX(-50%); display:flex; gap:6px; padding:4px; background:#ffffff14; border-radius:999px; }
+  #tabs button { background:transparent; color:inherit; padding:7px 14px; font-size:13px; border-radius:999px; opacity:.75; }
+  #tabs button.on { background:var(--gold); color:var(--ink); opacity:1; font-weight:700; }
+  body.light #tabs { background:#00000010; } body.light #tabs button.on { color:#fff; }
+  #bar input[type=text] { width:130px; padding:8px 10px; border-radius:10px; border:1px solid #ffffff33; background:#ffffff14; color:inherit; font:inherit; font-size:13px; }
+  #zoomBar { position:fixed; left:50%; top:130px; transform:translateX(-50%); display:flex; gap:6px; }
+  #zoomBar[hidden] { display:none; }
+  #zoomBar button { background:#000a; color:#fff; backdrop-filter:blur(6px); }
+  body.light #zoomBar button { background:#fffc; color:#4a2a3a; }
+  #photoTools { position:fixed; transform:translate(-50%,-50%); display:flex; flex-wrap:wrap; justify-content:center; gap:6px; padding:8px; max-width:92vw; background:#000b; backdrop-filter:blur(8px); border-radius:16px; opacity:0; pointer-events:none; transition:opacity .18s; }
+  #photoTools.show { opacity:1; pointer-events:auto; }
+  #photoTools button { font-size:13px; padding:7px 11px; background:#ffffff22; color:#fff; }
+  #photoTools button:hover:not(:disabled) { background:var(--gold); color:var(--ink); }
+  #photoTools button:disabled { opacity:.4; cursor:default; }
+  #tip { position:fixed; z-index:5; pointer-events:none; background:#000c; color:#fff; font-size:12px; padding:5px 10px; border-radius:8px; white-space:nowrap; }
+  #tip[hidden] { display:none; }
+  #editor { position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; background:#000a; padding:16px; }
+  #editor[hidden] { display:none; }
+  #editor .card { width:min(340px,100%); padding:16px; display:flex; flex-direction:column; gap:10px; background:#2a1b3a; border:1px solid #ffffff2a; border-radius:18px; }
+  #editor h3 { margin:0; color:var(--gold); } #editor p { margin:0; font-size:13px; opacity:.8; }
+  #editor canvas { width:100%; height:auto; border-radius:10px; touch-action:none; cursor:grab; background:#000; }
+  #editor label { display:flex; align-items:center; gap:8px; font-size:13px; } #editor input[type=range] { flex:1; accent-color:var(--gold); }
+  #editor .row { display:flex; gap:8px; justify-content:flex-end; }
+  body.light #editor .card { background:#fff; color:#4a2a3a; }
+  #textPanel { position:fixed; left:50%; bottom:calc(128px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); width:min(340px,92vw); padding:14px; display:flex; flex-direction:column; gap:10px; background:#2a1b3af2; border:1px solid #ffffff2a; border-radius:16px; z-index:6; }
+  #textPanel[hidden] { display:none; }
+  #textPanel h3 { margin:0; font-size:15px; color:var(--gold); }
+  #textPanel label { display:flex; flex-direction:column; gap:4px; font-size:12px; opacity:.95; }
+  #textPanel input { padding:8px 10px; border-radius:10px; border:1px solid #ffffff33; background:#ffffff14; color:inherit; font:inherit; font-size:14px; }
+  body.light #textPanel { background:#fffffff2; color:#4a2a3a; } body.light #textPanel input { background:#fff; border-color:#0002; }
+  #toast button { margin-left:10px; padding:4px 12px; font-size:13px; }
+  #toast.act { pointer-events:auto; }
+  /* 글자 줄바꿈: 한글은 단어 단위로만 끊고, 버튼·탭은 한 줄 유지, 좁은 화면에선 글자와 여백이 함께 줄어듭니다 */
+  body { word-break:keep-all; overflow-wrap:break-word; }
+  button, select, label, #tip, #toast { white-space:nowrap; }
+  #hint { max-width:min(92vw,560px); margin:4px auto 0; font-size:clamp(11px,2.9vw,13px); line-height:1.45; text-wrap:balance; }
+  #title { font-size:clamp(20px,6vw,34px); white-space:nowrap; text-overflow:ellipsis; }
+  #tabs { max-width:94vw; }
+  #tabs button { flex:0 1 auto; min-width:0; padding:7px clamp(8px,2.6vw,14px); font-size:clamp(11px,3.2vw,13px); }
+  #bar { gap:6px 8px; width:max-content; max-width:94vw; } #photoTools { width:max-content; }
+  #bar input[type=range] { width:clamp(60px,18vw,90px); } #bar button, #bar select, #bar label { font-size:clamp(11px,3vw,14px); }
+  #bar button:not(#play) { padding:8px clamp(8px,2.4vw,14px); }
+  #photoTools button { font-size:clamp(11px,3vw,13px); padding:7px clamp(7px,2vw,11px); }
+  #toast { max-width:92vw; white-space:normal; text-wrap:balance; }
+  #textPanel label, #editor p, #editor label { white-space:normal; }
+  @media (max-width:420px) { #tabs { gap:2px; padding:3px; } #tabs button .em { display:none; } #photoTools { gap:4px; padding:6px; } }
+  @media (max-width:640px){ #tabs{ top:96px; } #bar input[type=range]{ width:70px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<header>
+  <input id="title" type="text" maxlength="24" aria-label="오르골 제목" spellcheck="false">
+  <p id="hint">오르골을 눌러 돔을 열어 보세요 · 사진과 음악 파일은 끌어다 놓아도 돼요</p>
+</header>
+
+
+<nav id="tabs" aria-label="시안">
+  <button data-theme="classic"><span class="em">🪵 </span>클래식 원목</button>
+  <button data-theme="pastel"><span class="em">🌸 </span>스위트 파스텔</button>
+  <button data-theme="starry"><span class="em">🌙 </span>별밤 블루</button>
+</nav>
+
+<div id="bar">
+  <button id="play" title="재생 / 정지" aria-label="재생">▶</button>
+  <select id="songSel" aria-label="곡 선택"><option value="canon">🎼 파헬벨 캐논</option><option value="ode">🎼 환희의 송가</option><option value="twinkle">⭐ 반짝반짝 작은 별</option><option value="elise">🎹 엘리제를 위하여</option><option value="birthday">🎂 생일 축하</option></select>
+  <button id="btnSong" class="ghost" title="mp3 등 내 음악 파일 넣기">🎧 내 음악</button>
+  <label>🎵 속도 <input id="tempo" type="range" min="50" max="130" value="84"></label>
+  <label>🔊 볼륨 <input id="vol" type="range" min="0" max="100" value="70"></label>
+  <button id="btnText" class="ghost">✏️ 글자 바꾸기</button>
+  <button id="btnPhoto">📷 사진 바꾸기</button>
+  <button id="btnClear" class="ghost">🗑 사진 빼기</button>
+  <label><input type="checkbox" id="glass" checked> 유리 돔</label>
+</div>
+
+<div id="toast"></div>
+<div id="zoomBar" hidden><button id="zIn" aria-label="더 크게">＋</button><button id="zOut" aria-label="더 작게">－</button><button id="closeBtn">✕ 닫기</button></div>
+<div id="photoTools" role="toolbar" aria-label="사진 편집">
+  <button id="tZoom">🔍 크게 보기</button><button id="tPhoto">📷 바꾸기</button><button id="tEdit">✂️ 편집</button><button id="tRemove">🗑 빼기</button>
+</div>
+<div id="tip" hidden></div>
+<div id="textPanel" hidden>
+  <h3>글자 바꾸기</h3>
+  <label>맨 위 제목<input id="titleP" type="text" maxlength="24" placeholder="예: 6학년 3반 오르골" spellcheck="false"></label>
+  <label>오르골 명판<input id="plateInput" type="text" maxlength="16" placeholder="예: 6-3 · 2026" spellcheck="false"></label>
+  <label>사진 아래 이름<input id="nameInput" type="text" maxlength="12" placeholder="예: 김민준" spellcheck="false"></label>
+  <button id="textClose">닫기</button>
+</div>
+<div id="editor" hidden>
+  <div class="card" role="dialog" aria-label="사진 편집">
+    <h3>사진 편집</h3>
+    <p>사진을 끌어서 위치를 맞추고, 슬라이더로 확대해요</p>
+    <canvas id="edCanvas" width="300" height="338"></canvas>
+    <label>확대 <input id="edZoom" type="range" min="1" max="3" step="0.01" value="1"></label>
+    <div class="row"><button id="edReset" class="ghost">처음으로</button><button id="edCancel" class="ghost">취소</button><button id="edOk">완료</button></div>
+  </div>
+</div>
+<input id="fileAudio" type="file" accept="audio/*" hidden>
+<input id="fileOne" type="file" accept="image/*" hidden>
+
+<script src="lib/three.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
